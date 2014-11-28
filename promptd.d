@@ -17,7 +17,7 @@ void main(string[] args)
 	// TODO: Add option to shorten at a certain length, or not at all?
 	prompt = shorten(prompt);
 
-	std.stdio.write(prompt, " %% ");
+	std.stdio.write(prompt);
 }
 
 // TODO: Parse /etc/passwd so that this works with other users'
