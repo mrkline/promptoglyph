@@ -1,8 +1,8 @@
 
 all: promptd
 
-promptd: *.d
-	dmd -wi -debug -ofpromptd *.d
+promptd: promptd.d
+	dmd -wi -debug -of$@ $^
 
 clean:
 	rm promptd *.o
