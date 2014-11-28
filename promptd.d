@@ -1,11 +1,14 @@
-import std.algorithm;
-import std.array;
-import std.conv;
-import std.exception;
-import std.file;
-import std.path;
-import std.process;
-import std.stdio;
+// Explicitly specify what we're importing from each module.
+// I don't usually do this, but the argument for it is that
+// it makes it easier to keep track of what each import is here for.
+import std.algorithm : map, startsWith;
+import std.array : array;
+import std.exception : ifThrown;
+import std.file : getcwd;
+import std.path : pathSplitter, buildPath;
+import std.process : environment;
+import std.stdio : write;
+import std.traits : isSomeString;
 
 void main(string[] args)
 {
@@ -17,7 +20,7 @@ void main(string[] args)
 	// TODO: Add option to shorten at a certain length, or not at all?
 	prompt = shorten(prompt);
 
-	std.stdio.write(prompt);
+	write(prompt);
 }
 
 // TODO: Parse /etc/passwd so that this works with other users'
