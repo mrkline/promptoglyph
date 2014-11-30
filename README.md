@@ -37,7 +37,7 @@ But this is pretty much just for my use and to mess around.
 ## What are you going to add?
 
 - [ ] Colors (something like coloring only the directory name?)
-- [ ] Possibly some command line options
+- [x] Some command line options
       (though it's equally arguable that it would be cleaner
        to just change the source and recompile for such a small program)
 - [ ] Possibly VCS integration, though apparently zsh has a nice

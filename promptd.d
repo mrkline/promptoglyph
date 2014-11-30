@@ -7,24 +7,54 @@ import std.array : array;
 import std.conv : to;
 import std.exception : ifThrown;
 import std.file : getcwd;
+import std.getopt;
 import std.path : pathSplitter, buildPath;
 import std.process : environment;
-import std.stdio : write;
+import std.stdio : write, writeln;
 import std.traits : isSomeString;
-import std.utf : stride;
+import std.utf : count, stride;
+
+import std.c.stdlib : exit;
 
 void main(string[] args)
 {
+	int shortenAt = 0;
+
+	getopt(args, config.caseSensitive,
+		"help|h", { writeln(helpString); exit(0); },
+		"version|v", { writeln(versionString); exit(0); },
+		"shorten-at-length|s", &shortenAt);
+
 	immutable string home = environment["HOME"].ifThrown(string.init);
 	immutable string cwd = getcwd();
 
 	string prompt = homeToTilde(cwd, home);
 
-	// TODO: Add option to shorten at a certain length, or not at all?
-	prompt = shorten(prompt);
+	if (prompt.count >= shortenAt)
+		prompt = shorten(prompt);
 
 	write(prompt);
 }
+
+string versionString = q"EOS
+promptd by Matt Kline, version 0.1
+EOS";
+
+string helpString = q"EOS
+usage: promptd [-s <length>]
+
+Options:
+
+  --help, -h
+    Display this help text
+
+  --version, -v
+    Display the version info
+
+  --shorten-at-length, -s <length>
+    Shorten the path if it exceeds <length>.
+    Defaults to 0 (always shorten)
+EOS";
 
 // TODO: Parse /etc/passwd so that this works with other users'
 //       home directories as well.
