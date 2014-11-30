@@ -60,7 +60,7 @@ EOS";
 //       home directories as well.
 pure string homeToTilde(string cwd, string home)
 {
-	if (cwd.startsWith(home))
+	if (home.length > 0 && cwd.startsWith(home))
 		return "~" ~ cwd[home.length .. $];
 	else
 		return cwd;
