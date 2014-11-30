@@ -86,6 +86,13 @@ pure string shorten(string path)
 	return buildPath(rest ~ last);
 }
 
+unittest
+{
+	assert(shorten("foo") == "foo");
+	assert(shorten("/foo/bar/baz") == "/f/b/baz");
+	assert(shorten("~foo/bar/baz") == "~foo/b/baz");
+}
+
 // Takes a string and returns its first character,
 // as a string
 pure auto firstOf(S)(S s) if (isSomeString!S)
@@ -98,4 +105,10 @@ body
 	// We use stride and take so that this plays nicely
 	// with non-ASCII file names.
 	return s.take(1).to!S;
+}
+
+unittest
+{
+	assert(firstOf("ASCII") == "A");
+	assert(firstOf("漢字") == "漢");
 }
