@@ -1,14 +1,17 @@
 // Explicitly specify what we're importing from each module.
 // I don't usually do this, but the argument for it is that
 // it makes it easier to keep track of what each import is here for.
-import std.algorithm : map, startsWith;
+// It's similar to Python's "from x import y"
+import std.algorithm : map, startsWith, take;
 import std.array : array;
+import std.conv : to;
 import std.exception : ifThrown;
 import std.file : getcwd;
 import std.path : pathSplitter, buildPath;
 import std.process : environment;
 import std.stdio : write;
 import std.traits : isSomeString;
+import std.utf : stride;
 
 void main(string[] args)
 {
@@ -62,5 +65,7 @@ in
 }
 body
 {
-	return [s[0]];
+	// We use stride and take so that this plays nicely
+	// with non-ASCII file names.
+	return s.take(1).to!S;
 }
