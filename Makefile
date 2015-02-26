@@ -1,10 +1,11 @@
+DC = dmd
 
 all: promptd
 
 promptd: promptd.d
-	dmd -wi -debug -of$@ $^
+	$(DC) -wi -g -debug -of$@ $^
 
 clean:
-	rm promptd *.o
+	rm -f promptd *.o
 
 .PHONY: clean
