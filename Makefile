@@ -2,7 +2,7 @@ DC = dmd
 
 all: promptd
 
-promptd: promptd.d
+promptd: promptd.d git.d
 	$(DC) -wi -g -debug -of$@ $^
 
 clean:

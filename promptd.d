@@ -10,11 +10,14 @@ import std.file : getcwd;
 import std.getopt;
 import std.path : pathSplitter, buildPath;
 import std.process : environment;
+import std.range : empty;
 import std.stdio : write, writeln;
 import std.traits : isSomeString;
 import std.utf : count, stride;
 
 import std.c.stdlib : exit;
+
+import git;
 
 void main(string[] args)
 {
@@ -25,15 +28,15 @@ void main(string[] args)
 		"version|v", { writeln(versionString); exit(0); },
 		"shorten-at-length|s", &shortenAt);
 
-	immutable string home = environment["HOME"].ifThrown(string.init);
-	immutable string cwd = getcwd();
+	immutable string home = environment["HOME"].ifThrown("");
+	immutable string cwd = getcwd().ifThrown("???");
 
 	string prompt = homeToTilde(cwd, home);
 
 	if (prompt.count >= shortenAt)
 		prompt = shorten(prompt);
 
-	write(prompt);
+	write(prompt, " ", stringRepOfStatus(getRepoStatus()));
 }
 
 string versionString = q"EOS
@@ -60,7 +63,7 @@ EOS";
 //       home directories as well.
 pure string homeToTilde(string cwd, string home)
 {
-	if (home.length > 0 && cwd.startsWith(home))
+	if (!home.empty && cwd.startsWith(home))
 		return "~" ~ cwd[home.length .. $];
 	else
 		return cwd;
@@ -98,11 +101,11 @@ unittest
 pure auto firstOf(S)(S s) if (isSomeString!S)
 in
 {
-	assert(s.length > 0);
+	assert(!s.empty);
 }
 body
 {
-	// We use stride and take so that this plays nicely
+	// We use take so that this plays nicely
 	// with non-ASCII file names.
 	return s.take(1).to!S;
 }
