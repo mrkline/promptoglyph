@@ -65,13 +65,14 @@ string stringRepOfStatus(const Flags* status)
 	if (status is null)
 		return "";
 
+	// TODO: Abstract ANSI escape code magic.
 	string ret;
 	if (status.indexed)
-		ret ~= "✔";
+		ret ~= "\33[32m✔"; // Green check
 	if (status.modified)
-		ret ~= "±";
+		ret ~= "\33[33m±"; // Yellow plus/minus
 	if (status.untracked)
-		ret ~= "?";
+		ret ~= "\33[31m?"; // Red quesiton mark
 
-	return "[" ~ ret ~ "]";
+	return "[" ~ ret ~ "\33[39m]";
 }
