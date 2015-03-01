@@ -36,7 +36,7 @@ void main(string[] args)
 	if (prompt.count >= shortenAt)
 		prompt = shorten(prompt);
 
-	write(prompt, " ", stringRepOfStatus(getRepoStatus()));
+	write(prompt, " ", stringRepOfStatus());
 }
 
 string versionString = q"EOS
