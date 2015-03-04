@@ -17,6 +17,7 @@ import std.utf : count, stride;
 
 import std.c.stdlib : exit;
 
+import color;
 import git;
 import help;
 
@@ -25,6 +26,8 @@ void main(string[] args)
 	int shortenAt = 0;
 	bool pathOnly;
 	bool vcsInfoOnly;
+	bool noColor;
+	bool zsh;
 
 	try {
 		getopt(args,
@@ -34,7 +37,9 @@ void main(string[] args)
 			"version|v", { writeAndSucceed(versionString); },
 			"shorten-at-length|s", &shortenAt,
 			"path-only", &pathOnly,
-			"vcs-only", &vcsInfoOnly);
+			"vcs-only", &vcsInfoOnly,
+			"no-color", &noColor,
+			"zsh|z", &zsh);
 	}
 	catch (GetOptException ex) {
 		writeAndFail(ex.msg, "\n", helpString);
@@ -43,20 +48,29 @@ void main(string[] args)
 	if (pathOnly && vcsInfoOnly)
 		writeAndFail(`"Path only" and "VCS info only" options both requested. Wat.`);
 
-	immutable string home = environment["HOME"].ifThrown("");
-	immutable string cwd = getcwd().ifThrown("???");
+	string path, vcsInfo;
 
-	string path = homeToTilde(cwd, home);
+	if (!vcsInfoOnly) {
+		immutable string home = environment["HOME"].ifThrown("");
+		immutable string cwd = getcwd().ifThrown("???");
 
-	if (path.count >= shortenAt)
-		path = shorten(path);
+		path = homeToTilde(cwd, home);
+
+		if (path.count >= shortenAt)
+			path = shorten(path);
+	}
+
+	if (!pathOnly) {
+		vcsInfo = stringRepOfStatus(noColor ? UseColor.no : UseColor.yes,
+	                                zsh ? ZshEscapes.yes : ZshEscapes.no);
+	}
 
 	if (pathOnly)
 		write(path);
 	else if (vcsInfoOnly)
-		write(stringRepOfStatus());
+		write(vcsInfo);
 	else
-		write(path, " ", stringRepOfStatus());
+		write(path, " ", vcsInfo);
 }
 
 string versionString = q"EOS
@@ -83,6 +97,13 @@ Options:
 
   --vcs-only
     Only write VCS info (omit the possibly shortened path)
+
+  --no-color
+    Disables colored output, which is on by default
+
+  --zsh|z
+    Used to emit additional escapes needed for color sequences in ZSH prompts.
+    Ignored if --no-color is specified.
 EOS";
 
 // TODO: Parse /etc/passwd so that this works with other users'

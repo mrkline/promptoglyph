@@ -8,6 +8,8 @@ import std.range;
 import std.stdio;
 import std.string;
 
+import color;
+
 struct RepoStatus {
 	bool untracked;
 	bool modified;
@@ -15,32 +17,42 @@ struct RepoStatus {
 	string head;
 };
 
-string stringRepOfStatus()
+string stringRepOfStatus(UseColor colors, ZshEscapes escapes)
 {
 	auto status = getRepoStatus();
 	if (status is null)
 		return "";
 
+	// Local function that colors a source string if the colors flag is set.
+	string colorText(string source,
+	                 string function(ZshEscapes) colorFunction)
+	{
+		if (!colors)
+			return source;
+		else
+			return colorFunction(escapes) ~ source;
+	}
+
 	// TODO: Abstract ANSI escape code magic.
 	string head;
 
 	if (!status.head.empty)
-		head = "%{\33[36m%}" ~ status.head; // Cyan branch name
+		head = colorText(status.head, &cyan);
 
 	string flags = " ";
 
 	if (status.indexed)
-		flags ~= "%{\33[32m%}✔"; // Green check
+		flags ~= colorText("✔", &green);
 	if (status.modified)
-		flags ~= "%{\33[33m%}±"; // Yellow plus/minus
+		flags ~= colorText("±", &yellow); // Yellow plus/minus
 	if (status.untracked)
-		flags ~= "%{\33[31m%}?"; // Red quesiton mark
+		flags ~= colorText("?", &red); // Red quesiton mark
 
 	// We don't want an extra space if there's nothing to show.
 	if (flags == " ")
 		flags = "";
 
-	return "[" ~ head ~ flags ~ "%{\33[39m%}]";
+	return "[" ~ head ~ flags ~ colorText("]", &resetColor);
 }
 
 private:
