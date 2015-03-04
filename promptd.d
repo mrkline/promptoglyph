@@ -18,25 +18,45 @@ import std.utf : count, stride;
 import std.c.stdlib : exit;
 
 import git;
+import help;
 
 void main(string[] args)
 {
 	int shortenAt = 0;
+	bool pathOnly;
+	bool vcsInfoOnly;
 
-	getopt(args, config.caseSensitive,
-		"help|h", { writeln(helpString); exit(0); },
-		"version|v", { writeln(versionString); exit(0); },
-		"shorten-at-length|s", &shortenAt);
+	try {
+		getopt(args,
+			config.caseSensitive,
+			config.bundling,
+			"help|h", { writeAndSucceed(helpString); },
+			"version|v", { writeAndSucceed(versionString); },
+			"shorten-at-length|s", &shortenAt,
+			"path-only", &pathOnly,
+			"vcs-only", &vcsInfoOnly);
+	}
+	catch (GetOptException ex) {
+		writeAndFail(ex.msg, "\n", helpString);
+	}
+
+	if (pathOnly && vcsInfoOnly)
+		writeAndFail(`"Path only" and "VCS info only" options both requested. Wat.`);
 
 	immutable string home = environment["HOME"].ifThrown("");
 	immutable string cwd = getcwd().ifThrown("???");
 
-	string prompt = homeToTilde(cwd, home);
+	string path = homeToTilde(cwd, home);
 
-	if (prompt.count >= shortenAt)
-		prompt = shorten(prompt);
+	if (path.count >= shortenAt)
+		path = shorten(path);
 
-	write(prompt, " ", stringRepOfStatus());
+	if (pathOnly)
+		write(path);
+	else if (vcsInfoOnly)
+		write(stringRepOfStatus());
+	else
+		write(path, " ", stringRepOfStatus());
 }
 
 string versionString = q"EOS
@@ -57,6 +77,12 @@ Options:
   --shorten-at-length, -s <length>
     Shorten the path if it exceeds <length>.
     Defaults to 0 (always shorten)
+
+  --path-only
+    Only write the (possibly shortened) path (omit VCS info)
+
+  --vcs-only
+    Only write VCS info (omit the possibly shortened path)
 EOS";
 
 // TODO: Parse /etc/passwd so that this works with other users'
