@@ -1,4 +1,5 @@
 import std.algorithm;
+import std.concurrency;
 import std.conv;
 import std.exception;
 import std.file;
@@ -10,12 +11,21 @@ import std.string;
 
 import color;
 
-struct RepoStatus {
+struct RepoFlags {
 	bool untracked;
 	bool modified;
 	bool indexed;
+}
+
+struct RepoStatus {
+	RepoFlags flags;
 	string head;
 };
+
+struct ConcurrencyTag(string tag) { }
+
+// Use to signal an early abort to the git status command
+alias ConcurrencyTag!"exit" ExitTag;
 
 string stringRepOfStatus(UseColor colors, ZshEscapes escapes)
 {
@@ -41,11 +51,11 @@ string stringRepOfStatus(UseColor colors, ZshEscapes escapes)
 
 	string flags = " ";
 
-	if (status.indexed)
+	if (status.flags.indexed)
 		flags ~= colorText("✔", &green);
-	if (status.modified)
+	if (status.flags.modified)
 		flags ~= colorText("±", &yellow); // Yellow plus/minus
-	if (status.untracked)
+	if (status.flags.untracked)
 		flags ~= colorText("?", &red); // Red quesiton mark
 
 	// We don't want an extra space if there's nothing to show.
@@ -66,13 +76,38 @@ RepoStatus* getRepoStatus()
 	if (rootFinder.status != 0 || repoRoot.empty)
 		return null;
 
-	// Light off git status while we find the HEAD
-	auto pipes = pipeProcess(["git", "status", "--porcelain"]);
-	scope(failure) { kill(pipes.pid); wait(pipes.pid); }
+	auto flagsThread = spawn(&asyncGetFlags);
 
 	RepoStatus* ret = new RepoStatus;
 
 	ret.head = repoRoot.getHead();
+
+	receive(
+		(RepoFlags f) { ret.flags = f; }
+	);
+
+	return ret;
+}
+
+void asyncGetFlags()
+{
+	import core.sys.posix.poll;
+
+	RepoFlags ret;
+	// When we finish, send our flags over.
+	scope(exit) ownerTid.send(ret);
+
+	// Light off git status while we find the HEAD
+	auto pipes = pipeProcess(["git", "status", "--porcelain"]);
+	scope(failure) { kill(pipes.pid); wait(pipes.pid); }
+
+	immutable int fdes = core.stdc.stdio.fileno(pipes.stdout.getFP());
+	if (fdes < 0)
+		stderr.writeln("fdes failed.");
+
+	pollfd pfd;
+	pfd.fd = fdes;
+	pfd.events = POLLIN;
 
 	// See the docs for git status porcelain output
 	auto statusChars = pipes.stdout
@@ -80,11 +115,37 @@ RepoStatus* getRepoStatus()
 		// Why is this .array needed? Check odd set.back error below
 		.map!(l => l.takeExactly(2).array); // Take the first two chars
 
+	/* TODO: Intermix the poll calls with the loop that reads the statusChars range.
+	 *
+	 * While we are not ready for reading (POLLIN),
+	 * periodically check to see if we got an early abort.
+	 *
+	 * Once we are ready for reading,
+	 * check each line to see if we got an early abort, but ignore it
+	 * if SIGHUP has been set, as that means git has exited
+	 * and we just need to read the remaining lines out of the pipe.
+	 */
+	while (true) {
+		if (poll(&pfd, 1, 0) < 0) {
+			stderr.writeln("poll failed.");
+			break;
+		}
+		if (pfd.revents & POLLIN) {
+			break;
+		}
+		if (pfd.revents & POLLHUP) {
+			stderr.writeln("HUP");
+			break;
+		}
+		// TODO: receive on a timeout here for an early abort
+	}
+	stderr.writeln("RDY");
 
 	foreach (set; statusChars) {
 		// git status --porcelain spits out a two-character code
 		// for each file that would show up in Git status
-		enforce(set.length == 2, "Unexpected Git output:" ~ set.to!string);
+		if (set.length != 2)
+			stderr.writeln("Unexpected Git output:", set.to!string);
 
 		// Question marks indicate a file is untracked.
 		if (set.canFind('?')) {
@@ -105,9 +166,8 @@ RepoStatus* getRepoStatus()
 		}
 	}
 
-	enforce(wait(pipes.pid) == 0, "Git status failed.");
-
-	return ret;
+	if (wait(pipes.pid) != 0)
+		stderr.writeln("Git status failed.");
 }
 
 string getHead(string repoRoot)
