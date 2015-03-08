@@ -93,6 +93,8 @@ bool pastTime(Duration allottedTime)
 // or returns null if we are not in one.
 RepoStatus* getRepoStatus(Duration allottedTime)
 {
+	import std.parallelism;
+
 	// This should give us the root directory of the Git repo
 	auto rootFinder = execute(["git", "rev-parse", "--show-toplevel"]);
 
@@ -103,21 +105,27 @@ RepoStatus* getRepoStatus(Duration allottedTime)
 
 	RepoStatus* ret = new RepoStatus;
 
-	// TODO: Possibly run these in paralell as promises
-	// using std.parallelism
-	
-	// getHead is run first and is not time-boxed since its time to run
+	// Run the expensive operation (the git status call)
+	// in parallel.
+	// Yes, both will likely be bound by disk I/O,
+	// but I assume that the OS can optimize many reads at once
+	// faster than us issuing them in serial.
+	auto statusTask = scopedTask!asyncGetFlags(allottedTime);
+	statusTask.executeInNewThread();
+
+	// getHead is not time-boxed since its time to run
 	// varies vary little in proportion to the repo size.
 	// Unless you have thousands of Git heads (WTF?), this shouldn't
 	// take long at all.
 	ret.head = getHead(repoRoot);
-	ret.flags = asyncGetFlags(allottedTime);
+	ret.flags = statusTask.yieldForce();
 
 	return ret;
 }
 
 /// Uses asynchronous I/O to read as much git status output as it can
 /// in the given amount of time.
+public // So std.parallelism can get at it
 StatusFlags asyncGetFlags(Duration allottedTime)
 {
 	// Currently we can only do this for Unix.
