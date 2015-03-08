@@ -45,6 +45,25 @@ There are no dependencies.
 
 promptd will be added as a [Dub](http://code.dlang.org) package soon-ish.
 
+## How do I use it for my prompt?
+
+Just invoke the programs with the desired options (see their `--help` info)
+in your prompt expression.
+
+In Zsh (for the prompt shown in the demo):
+
+```shell
+setopt PROMPT_SUBST
+setopt PROMPT_PERCENT
+PROMPT='%B$(promptd-path) $(promptd-vcs --zsh) %%%b '
+```
+
+In Bash,
+
+```shell
+PS1="\$(promptd-path) \$(promptd-vcs) % "
+```
+
 ## It's 2015. Why are you generating a prompt with a compiled program?
 
 I was using Zsh with [oh-my-zsh](https://github.com/robbyrussell/oh-my-zsh),
