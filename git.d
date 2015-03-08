@@ -2,8 +2,8 @@ import std.algorithm : canFind, filter, splitter;
 import std.conv : to;
 import std.datetime : Clock, Duration;
 import std.exception : enforce;
-import std.file : DirEntry;
-import std.path : baseName, buildPath, dirEntries, relativePath, readText, SpanMode;
+import std.file : dirEntries, DirEntry, readText, SpanMode;
+import std.path : baseName, buildPath, relativePath;
 import std.process; // : A whole lotta stuff
 import std.range : empty, front, back;
 import std.stdio : File;
