@@ -16,7 +16,7 @@ It currently has two parts:
 
 Together, you can use them to build a prompt like this:
 
-![promptd example](http://i.imgur.com/tqmjAUZ.png)
+![animated promptd example](http://i.imgur.com/2xhoIus.gif)
 
 More to follow.
 
