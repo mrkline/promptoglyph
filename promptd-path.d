@@ -67,6 +67,11 @@ Options:
   --shorten-at-length, -s <length>
     Shorten the path if it exceeds <length>.
     Defaults to 0 (always shorten)
+
+promptd-path is designed to be part of a shell prompt.
+It prints your current path, shortened in a similar manner to paths in fish.
+If you only want to shorten paths longer than a given length, use
+--shorten-at-length.
 EOS";
 
 // TODO: Parse /etc/passwd so that this works with other users'
