@@ -6,6 +6,7 @@ import std.algorithm : map, startsWith, take;
 import std.array : array;
 import std.conv : to;
 import std.exception : ifThrown;
+import std.datetime : msecs;
 import std.file : getcwd;
 import std.getopt;
 import std.path : pathSplitter, buildPath;
@@ -61,7 +62,8 @@ void main(string[] args)
 	}
 
 	if (!pathOnly) {
-		vcsInfo = stringRepOfStatus(noColor ? UseColor.no : UseColor.yes,
+		vcsInfo = stringRepOfStatus(500.msecs,
+		                            noColor ? UseColor.no : UseColor.yes,
 	                                zsh ? ZshEscapes.yes : ZshEscapes.no);
 	}
 

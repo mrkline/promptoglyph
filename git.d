@@ -1,25 +1,44 @@
-import std.algorithm;
-import std.conv;
-import std.exception;
-import std.file;
-import std.path;
-import std.process;
-import std.range;
-import std.stdio;
-import std.string;
+import std.algorithm : canFind, filter, splitter;
+import std.conv : to;
+import std.datetime : Clock, Duration;
+import std.exception : enforce;
+import std.file : DirEntry;
+import std.path : baseName, buildPath, dirEntries, relativePath, readText, SpanMode;
+import std.process; // : A whole lotta stuff
+import std.range : empty, front, back;
+import std.stdio : File;
+import std.string : startsWith, strip;
 
 import color;
 
+/// Information returned by invoking git status
+struct StatusFlags {
+	bool untracked; ///< Untracked files are present in the repo.
+	bool modified; ///< Tracked files have been modified
+	bool indexed; ///< Files are in Git's index, ready for commit
+}
+
+/// Git status output plus the repository's HEAD
 struct RepoStatus {
-	bool untracked;
-	bool modified;
-	bool indexed;
+	StatusFlags flags;
 	string head;
 };
 
-string stringRepOfStatus(UseColor colors, ZshEscapes escapes)
+/**
+ * Gets a string representation of the status of the Git repo
+ *
+ * Params:
+ *   allottedTime = The amount of time given to gather Git info.
+ *                  Git status will be killed if it does not complete in this much time.
+ *                  Since this is for a shell prompt, responsiveness is important.
+ *   colors = Whether or not colored output is desired
+ *   escapes = Whether or not ZSH escapes are needed. Ignored if no colors are desired.
+ *
+ */
+string stringRepOfStatus(Duration allottedTime, UseColor colors, ZshEscapes escapes)
 {
-	auto status = getRepoStatus();
+	// getRepoStatus will return null if we are not in a repo
+	auto status = getRepoStatus(allottedTime);
 	if (status is null)
 		return "";
 
@@ -33,7 +52,6 @@ string stringRepOfStatus(UseColor colors, ZshEscapes escapes)
 			return colorFunction(escapes) ~ source;
 	}
 
-	// TODO: Abstract ANSI escape code magic.
 	string head;
 
 	if (!status.head.empty)
@@ -41,24 +59,43 @@ string stringRepOfStatus(UseColor colors, ZshEscapes escapes)
 
 	string flags = " ";
 
-	if (status.indexed)
+	if (status.flags.indexed)
 		flags ~= colorText("✔", &green);
-	if (status.modified)
+	if (status.flags.modified)
 		flags ~= colorText("±", &yellow); // Yellow plus/minus
-	if (status.untracked)
+	if (status.flags.untracked)
 		flags ~= colorText("?", &red); // Red quesiton mark
 
 	// We don't want an extra space if there's nothing to show.
 	if (flags == " ")
 		flags = "";
 
-	return "[" ~ head ~ flags ~ colorText("]", &resetColor);
+	string ret = "[" ~ head ~ flags ~ colorText("]", &resetColor);
+
+	// Prepend a T if git status ran out of time
+	if (pastTime(allottedTime))
+		ret = 'T' ~ ret;
+
+	return ret;
 }
 
 private:
 
-RepoStatus* getRepoStatus()
+/// Returns true if the program has been running for longer
+/// than the given duration.
+bool pastTime(Duration allottedTime)
 {
+	return cast(Duration)Clock.currAppTick > allottedTime;
+}
+
+
+// Fetches information about the Git repository,
+// or returns null if we are not in one.
+RepoStatus* getRepoStatus(Duration allottedTime)
+{
+	import std.parallelism;
+
+	// This should give us the root directory of the Git repo
 	auto rootFinder = execute(["git", "rev-parse", "--show-toplevel"]);
 
 	immutable repoRoot = rootFinder.output.strip();
@@ -66,25 +103,56 @@ RepoStatus* getRepoStatus()
 	if (rootFinder.status != 0 || repoRoot.empty)
 		return null;
 
-	// Light off git status while we find the HEAD
-	auto pipes = pipeProcess(["git", "status", "--porcelain"]);
-	scope(failure) { kill(pipes.pid); wait(pipes.pid); }
-
 	RepoStatus* ret = new RepoStatus;
 
-	ret.head = repoRoot.getHead();
+	// Run the expensive operation (the git status call)
+	// in parallel.
+	// Yes, both will likely be bound by disk I/O,
+	// but I assume that the OS can optimize many reads at once
+	// faster than us issuing them in serial.
+	auto statusTask = scopedTask!asyncGetFlags(allottedTime);
+	statusTask.executeInNewThread();
 
+	// getHead is not time-boxed since its time to run
+	// varies vary little in proportion to the repo size.
+	// Unless you have thousands of Git heads (WTF?), this shouldn't
+	// take long at all.
+	ret.head = getHead(repoRoot);
+	ret.flags = statusTask.yieldForce();
+
+	return ret;
+}
+
+/// Uses asynchronous I/O to read as much git status output as it can
+/// in the given amount of time.
+public // So std.parallelism can get at it
+StatusFlags asyncGetFlags(Duration allottedTime)
+{
+	// Currently we can only do this for Unix.
+	// Windows async pipe I/O (they call it "overlapped" I/O)
+	// is more... involved.
+	// TODO: Either write a Windows implementation or suck it up
+	//       and do things synchronously in Windows.
+	import core.sys.posix.poll;
+
+	StatusFlags ret;
+
+	// Light off git status while we find the HEAD
+	auto pipes = pipeProcess(["git", "status", "--porcelain"], Redirect.stdout);
+	// If an exception gets thrown, be sure to cleanup the process.
+	scope(failure) {
+		kill(pipes.pid);
+		wait(pipes.pid);
+	}
+
+	// Local function for processing the output of git status.
 	// See the docs for git status porcelain output
-	auto statusChars = pipes.stdout
-		.byLine
-		// Why is this .array needed? Check odd set.back error below
-		.map!(l => l.takeExactly(2).array); // Take the first two chars
-
-
-	foreach (set; statusChars) {
+	void processPorcelainLine(string line)
+	{
 		// git status --porcelain spits out a two-character code
 		// for each file that would show up in Git status
-		enforce(set.length == 2, "Unexpected Git output:" ~ set.to!string);
+		// Why is this .array needed? Check odd set.back error below
+		string set = line[0 .. 2];
 
 		// Question marks indicate a file is untracked.
 		if (set.canFind('?')) {
@@ -105,11 +173,48 @@ RepoStatus* getRepoStatus()
 		}
 	}
 
-	enforce(wait(pipes.pid) == 0, "Git status failed.");
+	// We need the actual file descriptor of the pipe so we can call poll
+	immutable int fdes = core.stdc.stdio.fileno(pipes.stdout.getFP());
+	enforce(fdes >= 0, "fileno failed.");
+
+	pollfd pfd;
+	pfd.fd = fdes; // The file descriptor we want to poll
+	pfd.events = POLLIN; // Notify us if there is data to be read
+
+	// As long as git status is running, keep at it.
+	while (!tryWait(pipes.pid).terminated) {
+
+		// Poll the pipe with an arbitrary 5 millisecond timeout
+		enforce(poll(&pfd, 1, 5) >= 0, "poll failed");
+
+		// If we have data to read, process a line of it.
+		if (pfd.revents & POLLIN) {
+			processPorcelainLine(pipes.stdout.readln());
+		}
+
+		if (pastTime(allottedTime)) {
+			import core.sys.posix.signal: SIGKILL;
+			// We want to leave _right now_, and since git status
+			// is a read-only procedure, just kill -9 the thing.
+			kill(pipes.pid, SIGKILL);
+			break;
+		}
+	}
+
+	// Process anything left over
+	for (string remainingLine = pipes.stdout.readln();
+	     remainingLine !is null;
+	     remainingLine = pipes.stdout.readln())
+		processPorcelainLine(remainingLine);
+
+	// Join the process
+	wait(pipes.pid);
 
 	return ret;
 }
 
+/// Gets the name of the current Git head, or a shortened SHA
+/// if there is no symbolic name.
 string getHead(string repoRoot)
 {
 
@@ -121,7 +226,7 @@ string getHead(string repoRoot)
 	if (headSHA.startsWith("ref:"))
 		return headSHA.baseName;
 
-	// Otherwise lets go rummaging through the refs to find something
+	// Otherwise let's go rummaging through the refs to find something
 	immutable refsPath = buildPath(repoRoot, ".git", "refs");
 
 	// No need to check heads as we handled that case above.
