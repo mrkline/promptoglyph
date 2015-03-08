@@ -105,20 +105,13 @@ RepoStatus* getRepoStatus(Duration allottedTime)
 
 	RepoStatus* ret = new RepoStatus;
 
-	// Run the expensive operation (the git status call)
-	// in parallel.
-	// Yes, both will likely be bound by disk I/O,
-	// but I assume that the OS can optimize many reads at once
-	// faster than us issuing them in serial.
-	auto statusTask = scopedTask!asyncGetFlags(allottedTime);
-	statusTask.executeInNewThread();
-
 	// getHead is not time-boxed since its time to run
 	// varies vary little in proportion to the repo size.
 	// Unless you have thousands of Git heads (WTF?), this shouldn't
 	// take long at all.
 	ret.head = getHead(repoRoot);
-	ret.flags = statusTask.yieldForce();
+
+	ret.flags = asyncGetFlags(allottedTime);
 
 	return ret;
 }
