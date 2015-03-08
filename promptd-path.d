@@ -1,34 +1,28 @@
+module promptd.path;
+
 // Explicitly specify what we're importing from each module.
 // I don't usually do this, but the argument for it is that
 // it makes it easier to keep track of what each import is here for.
 // It's similar to Python's "from x import y"
 import std.algorithm : map, startsWith, take;
 import std.array : array;
-import std.conv : to;
-import std.exception : ifThrown;
 import std.datetime : msecs;
 import std.file : getcwd;
 import std.getopt;
 import std.path : pathSplitter, buildPath;
 import std.process : environment;
 import std.range : empty;
-import std.stdio : write, writeln;
 import std.traits : isSomeString;
 import std.utf : count, stride;
 
-import std.c.stdlib : exit;
-
-import color;
-import git;
 import help;
 
 void main(string[] args)
 {
+	import std.exception : ifThrown;
+	import std.stdio : write;
+
 	int shortenAt = 0;
-	bool pathOnly;
-	bool vcsInfoOnly;
-	bool noColor;
-	bool zsh;
 
 	try {
 		getopt(args,
@@ -36,51 +30,31 @@ void main(string[] args)
 			config.bundling,
 			"help|h", { writeAndSucceed(helpString); },
 			"version|v", { writeAndSucceed(versionString); },
-			"shorten-at-length|s", &shortenAt,
-			"path-only", &pathOnly,
-			"vcs-only", &vcsInfoOnly,
-			"no-color", &noColor,
-			"zsh|z", &zsh);
+			"shorten-at-length|s", &shortenAt);
 	}
 	catch (GetOptException ex) {
 		writeAndFail(ex.msg, "\n", helpString);
 	}
 
-	if (pathOnly && vcsInfoOnly)
-		writeAndFail(`"Path only" and "VCS info only" options both requested. Wat.`);
 
-	string path, vcsInfo;
+	immutable string home = environment["HOME"].ifThrown("");
+	immutable string cwd = getcwd().ifThrown(environment["PWD"]).ifThrown("???");
 
-	if (!vcsInfoOnly) {
-		immutable string home = environment["HOME"].ifThrown("");
-		immutable string cwd = getcwd().ifThrown("???");
+	string path = homeToTilde(cwd, home);
 
-		path = homeToTilde(cwd, home);
+	if (path.count >= shortenAt)
+		path = shorten(path);
 
-		if (path.count >= shortenAt)
-			path = shorten(path);
-	}
-
-	if (!pathOnly) {
-		vcsInfo = stringRepOfStatus(500.msecs,
-		                            noColor ? UseColor.no : UseColor.yes,
-	                                zsh ? ZshEscapes.yes : ZshEscapes.no);
-	}
-
-	if (pathOnly)
-		write(path);
-	else if (vcsInfoOnly)
-		write(vcsInfo);
-	else
-		write(path, " ", vcsInfo);
+	write(path);
 }
 
 string versionString = q"EOS
-promptd by Matt Kline, version 0.1
+promptd-path by Matt Kline, version 0.1
+Part of the promptd tool set
 EOS";
 
 string helpString = q"EOS
-usage: promptd [-s <length>]
+usage: promptd-path [-s <length>]
 
 Options:
 
@@ -93,19 +67,6 @@ Options:
   --shorten-at-length, -s <length>
     Shorten the path if it exceeds <length>.
     Defaults to 0 (always shorten)
-
-  --path-only
-    Only write the (possibly shortened) path (omit VCS info)
-
-  --vcs-only
-    Only write VCS info (omit the possibly shortened path)
-
-  --no-color
-    Disables colored output, which is on by default
-
-  --zsh|z
-    Used to emit additional escapes needed for color sequences in ZSH prompts.
-    Ignored if --no-color is specified.
 EOS";
 
 // TODO: Parse /etc/passwd so that this works with other users'
@@ -154,6 +115,8 @@ in
 }
 body
 {
+	import std.conv : to;
+
 	// We use take so that this plays nicely
 	// with non-ASCII file names.
 	return s.take(1).to!S;

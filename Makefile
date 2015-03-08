@@ -1,11 +1,21 @@
 DC = dmd
+DFLAGS = -wi -g
 
-all: promptd
+debug: DFLAGS += -debug
+debug: all
 
-promptd: promptd.d help.d git.d color.d
-	$(DC) -wi -g -debug -of$@ $^
+release: DFLAGS += -O -release
+release: all
+
+all: promptd-path promptd-vcs
+
+promptd-path: promptd-path.d help.d
+	$(DC) $(DFLAGS) -of$@ $^
+
+promptd-vcs: promptd-vcs.d help.d git.d color.d
+	$(DC) $(DFLAGS) -of$@ $^
 
 clean:
-	rm -f promptd *.o
+	rm -f promptd-path promptd-vcs *.o
 
 .PHONY: clean
