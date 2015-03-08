@@ -105,11 +105,7 @@ RepoStatus* getRepoStatus(Duration allottedTime)
 
 	RepoStatus* ret = new RepoStatus;
 
-	// getHead is not time-boxed since its time to run
-	// varies vary little in proportion to the repo size.
-	// Unless you have thousands of Git heads (WTF?), this shouldn't
-	// take long at all.
-	ret.head = getHead(repoRoot);
+	ret.head = getHead(repoRoot, allottedTime);
 
 	ret.flags = asyncGetFlags(allottedTime);
 
@@ -208,8 +204,11 @@ StatusFlags asyncGetFlags(Duration allottedTime)
 
 /// Gets the name of the current Git head, or a shortened SHA
 /// if there is no symbolic name.
-string getHead(string repoRoot)
+string getHead(string repoRoot, Duration allottedTime)
 {
+	// getHead doesn't use async I/O because it is assumed that
+	// reading one-line files will take a negligible amount of time.
+	// If this assumption proves false, we should revisit it.
 
 	immutable headPath = buildPath(repoRoot, ".git", "HEAD");
 	immutable headSHA = headPath.readAndStrip();
@@ -229,12 +228,16 @@ string getHead(string repoRoot)
 	string ret = searchDirectoryForHead(remotesPath, headSHA);
 	if (!ret.empty)
 		return relativePath(ret, remotesPath);
+	else if (pastTime(allottedTime))
+		return headSHA[0 .. 7];
 
 	// We didn't find anything in remotes. Let's check tags.
 	immutable tagsPath = buildPath(refsPath, "tags");
 	ret = searchDirectoryForHead(tagsPath, headSHA);
 	if (!ret.empty)
 		return relativePath(ret, tagsPath);
+	else if (pastTime(allottedTime))
+		return headSHA[0 .. 7];
 
 	// We didn't find anything in remotes. Let's check packed-refs
 	auto packedRefs = File(buildPath(repoRoot, ".git", "packed-refs"))
@@ -254,6 +257,8 @@ string getHead(string repoRoot)
 
 		if (sha == headSHA)
 			return refPath.baseName.idup;
+		else if (pastTime(allottedTime))
+			return headSHA[0 .. 7];
 	}
 
 	// Still nothing. Just return a shortened version of the HEAD sha
