@@ -8,7 +8,8 @@ It currently has two parts:
 - `promptd-path`, which prints a [fish](http://fishshell.com/)-like shortening
   of your current directory.
 
-- `promptd-vcs`, which uses glyphs to give you a quick overview of your Git
+- `promptd-vcs`, which uses glyphs to give you a quick overview of your
+  Git repository status.
   Unlike existing solutions such as the
   [vcs_info](http://zsh.sourceforge.net/Doc/Release/User-Contributions.html#Gathering-information-from-version-control-systems)
   plugin for Zsh, `promptd-vcs` stops running after a user-specified amount of
