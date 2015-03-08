@@ -1,14 +1,13 @@
-import std.algorithm;
-import std.conv;
-import std.datetime;
-import std.exception;
-import std.file;
-import std.path;
-import std.process;
-import std.range;
-import std.stdio;
-import std.string;
-import std.typecons;
+import std.algorithm : canFind, filter, splitter;
+import std.conv : to;
+import std.datetime : Clock, Duration;
+import std.exception : enforce;
+import std.file : DirEntry;
+import std.path : baseName, buildPath, dirEntries, relativePath, readText, SpanMode;
+import std.process; // : A whole lotta stuff
+import std.range : empty, front, back;
+import std.stdio : File;
+import std.string : startsWith, strip;
 
 import color;
 
