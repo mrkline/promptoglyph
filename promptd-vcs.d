@@ -37,7 +37,7 @@ void main(string[] args)
 }
 
 string versionString = q"EOS
-promptd-vcs by Matt Kline, version 0.1
+promptd-vcs by Matt Kline, version 0.1.1
 Part of the promptd tool set
 EOS";
 
@@ -54,13 +54,15 @@ Options:
 
   --time-limit, t
     The maximum amount of time the program can run before exiting,
-    in milliseconds.
+    in milliseconds. Defaults to 500 milliseconds.
     Running "git status" can take a long time for big or complex
     repositories, but since this program is for a prompt,
     we can't delay an arbitrary amount of time without annoying the user.
-    If it takes longer than this amount of time to get VCS status,
-    we prematurely kill the status programs and display whatever information
-    was received so far. Defaults to 500 milliseconds.
+    If it takes longer than this amount of time to get the repo status,
+    we prematurely kill "git status" and display whatever information
+    was received so far. The hope is that in subsequent runs, "git status" will
+    complete in time since your operating system caches recently-accessed
+    files and directories.
 
   --no-color
     Disables colored output, which is on by default
