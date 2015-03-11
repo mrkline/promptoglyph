@@ -4,14 +4,14 @@ module promptd.path;
 // I don't usually do this, but the argument for it is that
 // it makes it easier to keep track of what each import is here for.
 // It's similar to Python's "from x import y"
-import std.algorithm : map, startsWith, take;
+import std.algorithm : map, startsWith;
 import std.array : array;
 import std.datetime : msecs;
 import std.file : getcwd;
 import std.getopt;
 import std.path : pathSplitter, buildPath;
 import std.process : environment;
-import std.range : empty;
+import std.range : empty, take;
 import std.traits : isSomeString;
 import std.utf : count, stride;
 
