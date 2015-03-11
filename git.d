@@ -35,7 +35,7 @@ struct RepoStatus {
  *   escapes = Whether or not ZSH escapes are needed. Ignored if no colors are desired.
  *
  */
-string stringRepOfStatus(Duration allottedTime, UseColor colors, ZshEscapes escapes)
+string stringRepOfStatus(Duration allottedTime, UseColor colors, Escapes escapes)
 {
 	// getRepoStatus will return null if we are not in a repo
 	auto status = getRepoStatus(allottedTime);
@@ -44,7 +44,7 @@ string stringRepOfStatus(Duration allottedTime, UseColor colors, ZshEscapes esca
 
 	// Local function that colors a source string if the colors flag is set.
 	string colorText(string source,
-	                 string function(ZshEscapes) colorFunction)
+	                 string function(Escapes) colorFunction)
 	{
 		if (!colors)
 			return source;

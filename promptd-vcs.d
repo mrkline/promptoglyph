@@ -12,7 +12,7 @@ void main(string[] args)
 {
 	uint timeLimit = 500;
 	bool noColor;
-	bool zsh;
+	bool bash, zsh;
 
 	try {
 		getopt(args,
@@ -22,22 +22,34 @@ void main(string[] args)
 			"version|v", { writeAndSucceed(versionString); },
 			"time-limit|t", &timeLimit,
 			"no-color", &noColor,
+			"bash|b", &bash,
 			"zsh|z", &zsh);
 	}
 	catch (GetOptException ex) {
 		writeAndFail(ex.msg, "\n", helpString);
 	}
 
+	if (bash && zsh)
+		writeAndFail("Both --bash and --zsh specified. Wat.");
+
+	Escapes escapesToUse;
+	if (bash)
+		escapesToUse = Escapes.bash;
+	else if (zsh)
+		escapesToUse = Escapes.zsh;
+	else // Redundant (none is the default), but more explicit.
+		escapesToUse = Escapes.none;
+
 	string vcsInfo = stringRepOfStatus(
 		timeLimit.msecs,
 		noColor ? UseColor.no : UseColor.yes,
-		zsh ? ZshEscapes.yes : ZshEscapes.no);
+		escapesToUse);
 
 	write(vcsInfo);
 }
 
 string versionString = q"EOS
-promptd-vcs by Matt Kline, version 0.2
+promptd-vcs by Matt Kline, version 0.3
 Part of the promptd tool set
 EOS";
 
@@ -67,7 +79,11 @@ Options:
   --no-color
     Disables colored output, which is on by default
 
-  --zsh|z
+  --bash, -b
+    Used to emit additional escapes needed for color sequences in Bash prompts.
+    Ignored if --no-color is specified.
+
+  --zsh, -z
     Used to emit additional escapes needed for color sequences in ZSH prompts.
     Ignored if --no-color is specified.
 
