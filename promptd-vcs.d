@@ -49,7 +49,7 @@ void main(string[] args)
 }
 
 string versionString = q"EOS
-promptd-vcs by Matt Kline, version 0.3
+promptd-vcs by Matt Kline, version 0.3.1
 Part of the promptd tool set
 EOS";
 
