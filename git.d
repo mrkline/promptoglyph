@@ -139,30 +139,30 @@ StatusFlags asyncGetFlags(Duration allottedTime)
 	void processPorcelainLine(string line)
 	{
         // git status --porcelain can be empty
-        if (line.length >= 2) {
-	    	// git status --porcelain spits out a two-character code
-	    	// for each file that would show up in Git status
-	    	// Why is this .array needed? Check odd set.back error below
-	    	string set = line[0 .. 2];
+		if (line.length >= 2) {
+			// git status --porcelain spits out a two-character code
+			// for each file that would show up in Git status
+			// Why is this .array needed? Check odd set.back error below
+			string set = line[0 .. 2];
 
-	    	// Question marks indicate a file is untracked.
-	    	if (set.canFind('?')) {
-	    		ret.untracked = true;
-	    	}
-	    	else {
-	    		// The second character indicates the working tree.
-	    		// If it is not a blank or a question mark,
-	    		// we have some un-indexed changes.
-	    		if (set.back != ' ')
-	    			ret.modified = true;
+			// Question marks indicate a file is untracked.
+			if (set.canFind('?')) {
+				ret.untracked = true;
+			}
+			else {
+				// The second character indicates the working tree.
+				// If it is not a blank or a question mark,
+				// we have some un-indexed changes.
+				if (set.back != ' ')
+					ret.modified = true;
 
-	    		// The first character indicates the index.
-	    		// If it is not blank or a question mark,
-	    		// we have some indexed changes.
-	    		if (set.front != ' ')
-	    			ret.indexed = true;
-	    	}
-        }
+				// The first character indicates the index.
+				// If it is not blank or a question mark,
+				// we have some indexed changes.
+				if (set.front != ' ')
+					ret.indexed = true;
+			}
+		}
 	}
 
 	// We need the actual file descriptor of the pipe so we can call poll
