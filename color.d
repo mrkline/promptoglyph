@@ -43,5 +43,5 @@ string zshEscape(string code)
 
 string bashEscape(string code)
 {
-	return `\[` ~ code ~ `\]`;
+	return "\001" ~ code ~ "\002";
 }
