@@ -13,6 +13,8 @@ void main(string[] args)
 	uint timeLimit = 500;
 	bool noColor;
 	bool bash, zsh;
+	string prefix;
+	string suffix;
 
 	try {
 		getopt(args,
@@ -21,6 +23,8 @@ void main(string[] args)
 			"help|h", { writeAndSucceed(helpString); },
 			"version|v", { writeAndSucceed(versionString); },
 			"time-limit|t", &timeLimit,
+			"prefix|p", &prefix,
+			"suffix|s", &suffix,
 			"no-color", &noColor,
 			"bash|b", &bash,
 			"zsh|z", &zsh);
@@ -45,7 +49,7 @@ void main(string[] args)
 		noColor ? UseColor.no : UseColor.yes,
 		escapesToUse);
 
-	write(vcsInfo);
+	write(vcsInfo == "" ? vcsInfo : (prefix ~ vcsInfo ~ suffix));
 }
 
 string versionString = q"EOS
@@ -78,6 +82,14 @@ Options:
 
   --no-color
     Disables colored output, which is on by default
+
+  --prefix, -p
+    Text to prepend to the VCS information. If not in a VCS directory, the
+    prefix will not be displayed.
+
+  --suffix, -s
+    Text to append to the VCS information. If not in a VCS directory, the
+    suffix will not be displayed.
 
   --bash, -b
     Used to emit additional escapes needed for color sequences in Bash prompts.
