@@ -138,30 +138,30 @@ StatusFlags asyncGetFlags(Duration allottedTime)
 	// See the docs for git status porcelain output
 	void processPorcelainLine(string line)
 	{
-        // git status --porcelain can be empty
-		if (line.length >= 2) {
-			// git status --porcelain spits out a two-character code
-			// for each file that would show up in Git status
-			// Why is this .array needed? Check odd set.back error below
-			string set = line[0 .. 2];
+		if (line is null)
+			return;
 
-			// Question marks indicate a file is untracked.
-			if (set.canFind('?')) {
-				ret.untracked = true;
-			}
-			else {
-				// The second character indicates the working tree.
-				// If it is not a blank or a question mark,
-				// we have some un-indexed changes.
-				if (set.back != ' ')
-					ret.modified = true;
+		// git status --porcelain spits out a two-character code
+		// for each file that would show up in Git status
+		// Why is this .array needed? Check odd set.back error below
+		string set = line[0 .. 2];
 
-				// The first character indicates the index.
-				// If it is not blank or a question mark,
-				// we have some indexed changes.
-				if (set.front != ' ')
-					ret.indexed = true;
-			}
+		// Question marks indicate a file is untracked.
+		if (set.canFind('?')) {
+			ret.untracked = true;
+		}
+		else {
+			// The second character indicates the working tree.
+			// If it is not a blank or a question mark,
+			// we have some un-indexed changes.
+			if (set.back != ' ')
+				ret.modified = true;
+
+			// The first character indicates the index.
+			// If it is not blank or a question mark,
+			// we have some indexed changes.
+			if (set.front != ' ')
+				ret.indexed = true;
 		}
 	}
 
@@ -173,6 +173,8 @@ StatusFlags asyncGetFlags(Duration allottedTime)
 	pfd.fd = fdes; // The file descriptor we want to poll
 	pfd.events = POLLIN; // Notify us if there is data to be read
 
+	string nextLine;
+
 	// As long as git status is running, keep at it.
 	while (!tryWait(pipes.pid).terminated) {
 
@@ -181,10 +183,10 @@ StatusFlags asyncGetFlags(Duration allottedTime)
 
 		// If we have data to read, process a line of it.
 		if (pfd.revents & POLLIN) {
-			processPorcelainLine(pipes.stdout.readln());
+			nextLine = pipes.stdout.readln();
+			processPorcelainLine(nextLine);
 		}
-
-		if (pastTime(allottedTime)) {
+		else if (pastTime(allottedTime)) {
 			import core.sys.posix.signal: SIGKILL;
 			// We want to leave _right now_, and since git status
 			// is a read-only procedure, just kill -9 the thing.
@@ -194,10 +196,10 @@ StatusFlags asyncGetFlags(Duration allottedTime)
 	}
 
 	// Process anything left over
-	for (string remainingLine = pipes.stdout.readln();
-	     remainingLine !is null;
-	     remainingLine = pipes.stdout.readln())
-		processPorcelainLine(remainingLine);
+	while (nextLine !is null) {
+		nextLine = pipes.stdout.readln();
+		processPorcelainLine(nextLine);
+	}
 
 	// Join the process
 	wait(pipes.pid);
