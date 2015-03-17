@@ -187,10 +187,8 @@ StatusFlags asyncGetFlags(Duration allottedTime)
 			processPorcelainLine(nextLine);
 		}
 		else if (pastTime(allottedTime)) {
-			import core.sys.posix.signal: SIGKILL;
-			// We want to leave _right now_, and since git status
-			// is a read-only procedure, just kill -9 the thing.
-			kill(pipes.pid, SIGKILL);
+			import core.sys.posix.signal: SIGTERM;
+			kill(pipes.pid, SIGTERM);
 			break;
 		}
 	}
