@@ -7,14 +7,23 @@ import std.stdio : write;
 import color;
 import git;
 import help;
+import time;
+import vcs;
+
+struct StatusStringOptions {
+	string prefix = "[";
+	string suffix = "]";
+	string indexedText = "✔";
+	string modifiedText = "±";
+	string untrackedText = "?";
+}
 
 void main(string[] args)
 {
 	uint timeLimit = 500;
 	bool noColor;
 	bool bash, zsh;
-	string prefix;
-	string suffix;
+	StatusStringOptions stringOptions;
 
 	try {
 		getopt(args,
@@ -23,8 +32,11 @@ void main(string[] args)
 			"help|h", { writeAndSucceed(helpString); },
 			"version|v", { writeAndSucceed(versionString); },
 			"time-limit|t", &timeLimit,
-			"prefix|p", &prefix,
-			"suffix|s", &suffix,
+			"prefix|p", &stringOptions.prefix,
+			"indexed-text|i", &stringOptions.indexedText,
+			"modified-text|m", &stringOptions.modifiedText,
+			"untracked-text|u", &stringOptions.untrackedText,
+			"suffix|s", &stringOptions.suffix,
 			"no-color", &noColor,
 			"bash|b", &bash,
 			"zsh|z", &zsh);
@@ -44,12 +56,72 @@ void main(string[] args)
 	else // Redundant (none is the default), but more explicit.
 		escapesToUse = Escapes.none;
 
-	string vcsInfo = stringRepOfStatus(
-		timeLimit.msecs,
+	const Duration allottedTime = timeLimit.msecs;
+
+	const RepoStatus* status = getRepoStatus(allottedTime);
+
+	string statusString = stringRepOfStatus(
+		status, stringOptions,
 		noColor ? UseColor.no : UseColor.yes,
 		escapesToUse);
 
-	write(vcsInfo == "" ? vcsInfo : (prefix ~ vcsInfo ~ suffix));
+	// Prepend a T if git status ran out of time
+	if (pastTime(allottedTime))
+		statusString = 'T' ~ statusString;
+
+	write(statusString);
+}
+
+/**
+ * Gets a string representation of the status of the Git repo
+ *
+ * Params:
+ *   allottedTime = The amount of time given to gather Git info.
+ *                  Git status will be killed if it does not complete in this much time.
+ *                  Since this is for a shell prompt, responsiveness is important.
+ *   colors = Whether or not colored output is desired
+ *   escapes = Whether or not ZSH escapes are needed. Ignored if no colors are desired.
+ *
+ */
+string stringRepOfStatus(const RepoStatus* status, const ref StatusStringOptions stringOptions,
+                         UseColor colors, Escapes escapes)
+{
+	if (status is null)
+		return "";
+
+	// Local function that colors a source string if the colors flag is set.
+	string colorText(string source,
+	                 string function(Escapes) colorFunction)
+	{
+		if (!colors)
+			return source;
+		else
+			return colorFunction(escapes) ~ source;
+	}
+
+	string head;
+
+	if (!status.head.empty)
+		head = colorText(status.head, &cyan);
+
+	string flags = " ";
+
+	if (status.flags.indexed)
+		flags ~= colorText(stringOptions.indexedText, &green);
+	if (status.flags.modified)
+		flags ~= colorText(stringOptions.modifiedText, &yellow); // Yellow plus/minus
+	if (status.flags.untracked)
+		flags ~= colorText(stringOptions.untrackedText, &red); // Red quesiton mark
+
+	// We don't want an extra space if there's nothing to show.
+	if (flags == " ")
+		flags = "";
+
+	string ret = stringOptions.prefix ~ 
+	             head ~ flags ~
+	             colorText(stringOptions.suffix, &resetColor);
+
+	return ret;
 }
 
 string versionString = q"EOS
@@ -68,7 +140,7 @@ Options:
   --version, -v
     Display the version info
 
-  --time-limit, t
+  --time-limit, -t <milliseconds>
     The maximum amount of time the program can run before exiting,
     in milliseconds. Defaults to 500 milliseconds.
     Running "git status" can take a long time for big or complex
@@ -83,13 +155,23 @@ Options:
   --no-color
     Disables colored output, which is on by default
 
-  --prefix, -p
-    Text to prepend to the VCS information. If not in a VCS directory, the
-    prefix will not be displayed.
+  --prefix, -p <string>
+    Text to prepend to the VCS information (if in a VCS directory)
 
-  --suffix, -s
-    Text to append to the VCS information. If not in a VCS directory, the
-    suffix will not be displayed.
+  --untracked-text, -u <string>
+    Text to display when the VCS indicates untracked files
+    (if in a VCS directory)
+
+  --modified-text, -m <string>
+    Text to display when the VCS indicates files modified since the last commit
+    (if in a VCS directory)
+
+  --indexed-text, -i <string>
+    Text to display when the VSC indicates files ready to commit
+    (if in a VCS directory)
+
+  --suffix, -s <string>
+    Text to append to the VCS information (if in a VCS directory)
 
   --bash, -b
     Used to emit additional escapes needed for color sequences in Bash prompts.
@@ -100,13 +182,13 @@ Options:
     Ignored if --no-color is specified.
 
 promptd-vcs is designed to be part of a shell prompt.
-It prints a quick, glyph-based look at the status of a Git repository
+It prints a quick, symbolic look at the status of a Git repository
 if you are currently in one and nothing otherwise. Output looks like
     [master ✔±?]
 where "master" is the current branch, ? indicates untracked files,
 ± indicates changed but unstaged files, and ✔ indicates files staged
 in the index. If "git status" could not run in a timely manner to get this info
 (see --time-limit above), a T is placed in front.
-Future plans include configurable glyphs, additional info (like when merging),
+Future plans include additional info (like when merging),
 and possibly Subversion and Mercurial support.
 EOS";

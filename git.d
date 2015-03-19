@@ -1,6 +1,6 @@
 import std.algorithm : canFind, filter, splitter;
 import std.conv : to;
-import std.datetime : Clock, Duration;
+import std.datetime : Duration;
 import std.exception : enforce;
 import std.file : dirEntries, DirEntry, readText, SpanMode;
 import std.path : baseName, buildPath, relativePath;
@@ -9,85 +9,8 @@ import std.range : empty, front, back;
 import std.stdio : File;
 import std.string : startsWith, strip;
 
-import color;
-
-/// Information returned by invoking git status
-struct StatusFlags {
-	bool untracked; ///< Untracked files are present in the repo.
-	bool modified; ///< Tracked files have been modified
-	bool indexed; ///< Files are in Git's index, ready for commit
-}
-
-/// Git status output plus the repository's HEAD
-struct RepoStatus {
-	StatusFlags flags;
-	string head;
-};
-
-/**
- * Gets a string representation of the status of the Git repo
- *
- * Params:
- *   allottedTime = The amount of time given to gather Git info.
- *                  Git status will be killed if it does not complete in this much time.
- *                  Since this is for a shell prompt, responsiveness is important.
- *   colors = Whether or not colored output is desired
- *   escapes = Whether or not ZSH escapes are needed. Ignored if no colors are desired.
- *
- */
-string stringRepOfStatus(Duration allottedTime, UseColor colors, Escapes escapes)
-{
-	// getRepoStatus will return null if we are not in a repo
-	auto status = getRepoStatus(allottedTime);
-	if (status is null)
-		return "";
-
-	// Local function that colors a source string if the colors flag is set.
-	string colorText(string source,
-	                 string function(Escapes) colorFunction)
-	{
-		if (!colors)
-			return source;
-		else
-			return colorFunction(escapes) ~ source;
-	}
-
-	string head;
-
-	if (!status.head.empty)
-		head = colorText(status.head, &cyan);
-
-	string flags = " ";
-
-	if (status.flags.indexed)
-		flags ~= colorText("✔", &green);
-	if (status.flags.modified)
-		flags ~= colorText("±", &yellow); // Yellow plus/minus
-	if (status.flags.untracked)
-		flags ~= colorText("?", &red); // Red quesiton mark
-
-	// We don't want an extra space if there's nothing to show.
-	if (flags == " ")
-		flags = "";
-
-	string ret = "[" ~ head ~ flags ~ colorText("]", &resetColor);
-
-	// Prepend a T if git status ran out of time
-	if (pastTime(allottedTime))
-		ret = 'T' ~ ret;
-
-	return ret;
-}
-
-private:
-
-/// Returns true if the program has been running for longer
-/// than the given duration.
-bool pastTime(Duration allottedTime)
-{
-	return cast(Duration)Clock.currAppTick > allottedTime;
-}
-
+import time;
+import vcs;
 
 // Fetches information about the Git repository,
 // or returns null if we are not in one.
@@ -111,6 +34,9 @@ RepoStatus* getRepoStatus(Duration allottedTime)
 
 	return ret;
 }
+
+
+private:
 
 /// Uses asynchronous I/O to read as much git status output as it can
 /// in the given amount of time.

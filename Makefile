@@ -19,7 +19,7 @@ package: clean release
 promptd-path: promptd-path.d help.d
 	$(DC) $(DFLAGS) -of$@ $^
 
-promptd-vcs: promptd-vcs.d help.d git.d color.d
+promptd-vcs: promptd-vcs.d help.d vcs.d time.d color.d git.d
 	$(DC) $(DFLAGS) -of$@ $^
 
 clean:
