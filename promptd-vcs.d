@@ -115,14 +115,13 @@ string stringRepOfStatus(const RepoStatus* status, const ref StatusStringOptions
 	if (flags == " ")
 		flags = "";
 
-	string ret = stringOptions.prefix ~ 
-	             head ~ flags ~
+	string ret = head ~ flags ~
 	             colorText(stringOptions.suffix, &resetColor);
 
 	if (pastTime(allottedTime))
-		ret = 'T' ~ ret;
+		ret = "T " ~ ret;
 
-	return ret;
+	return stringOptions.prefix ~ ret;
 }
 
 string versionString = q"EOS
