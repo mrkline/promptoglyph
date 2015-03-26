@@ -7,7 +7,6 @@ import std.stdio : write;
 import color;
 import git;
 import help;
-import time;
 import vcs;
 
 struct StatusStringOptions {
@@ -63,11 +62,8 @@ void main(string[] args)
 	string statusString = stringRepOfStatus(
 		status, stringOptions,
 		noColor ? UseColor.no : UseColor.yes,
-		escapesToUse);
-
-	// Prepend a T if git status ran out of time
-	if (pastTime(allottedTime))
-		statusString = 'T' ~ statusString;
+		escapesToUse,
+		allottedTime);
 
 	write(statusString);
 }
@@ -84,8 +80,10 @@ void main(string[] args)
  *
  */
 string stringRepOfStatus(const RepoStatus* status, const ref StatusStringOptions stringOptions,
-                         UseColor colors, Escapes escapes)
+                         UseColor colors, Escapes escapes, Duration allottedTime)
 {
+	import time;
+
 	if (status is null)
 		return "";
 
@@ -120,6 +118,9 @@ string stringRepOfStatus(const RepoStatus* status, const ref StatusStringOptions
 	string ret = stringOptions.prefix ~ 
 	             head ~ flags ~
 	             colorText(stringOptions.suffix, &resetColor);
+
+	if (pastTime(allottedTime))
+		ret = 'T' ~ ret;
 
 	return ret;
 }
