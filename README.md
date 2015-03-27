@@ -62,7 +62,7 @@ PROMPT='%B$(promptd-path) $(promptd-vcs --zsh) %%%b '
 In Bash,
 
 ```shell
-PS1="\$(promptd-path) \$(promptd-vcs) % "
+PS1="\$(promptd-path) \$(promptd-vcs --bash) % "
 ```
 
 ## It's 2015. Why are you generating a prompt with a compiled program?
