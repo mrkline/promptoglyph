@@ -125,7 +125,7 @@ string stringRepOfStatus(const RepoStatus* status, const ref StatusStringOptions
 }
 
 string versionString = q"EOS
-promptd-vcs by Matt Kline, version 0.3.2
+promptd-vcs by Matt Kline, version 0.4
 Part of the promptd tool set
 EOS";
 
