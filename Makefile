@@ -9,7 +9,7 @@ debug: all
 release: DFLAGS += -O -release
 release: all
 
-all: promptd-path promptd-vcs
+all: $(BUILD_DIR)/promptd-path $(BUILD_DIR)/promptd-vcs
 
 package: clean release
 	mkdir promptd
@@ -18,13 +18,13 @@ package: clean release
 	gzip -f9 promptd.tar
 	rm -r promptd
 
-promptd-path: promptd-path.d help.d
+$(BUILD_DIR)/promptd-path: promptd-path.d help.d
 	@mkdir -p $(BUILD_DIR)
-	$(DC) $(DFLAGS) -of$(BUILD_DIR)/$@ $^
+	$(DC) $(DFLAGS) -of$@ $^
 
-promptd-vcs: promptd-vcs.d help.d vcs.d time.d color.d git.d
+$(BUILD_DIR)/promptd-vcs: promptd-vcs.d help.d vcs.d time.d color.d git.d
 	@mkdir -p $(BUILD_DIR)
-	$(DC) $(DFLAGS) -of$(BUILD_DIR)/$@ $^
+	$(DC) $(DFLAGS) -of$@ $^
 
 install: clean release
 	cp $(BUILD_DIR)/promptd-path $(BUILD_DIR)/promptd-vcs $(INSTALL_DIR)
