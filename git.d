@@ -150,23 +150,25 @@ string getHead(string repoRoot, Duration allottedTime)
 	// Otherwise let's go rummaging through the refs to find something
 	immutable refsPath = buildPath(repoRoot, ".git", "refs");
 
+	string ret;
+
+	// Let's check tags next
+	immutable tagsPath = buildPath(refsPath, "tags");
+	ret = searchTagsForHead(tagsPath, headSHA);
+	if (!ret.empty)
+		return relativePath(ret, tagsPath);
+	else if (pastTime(allottedTime))
+		return headSHA[0 .. 7];
+
 	// No need to check heads as we handled that case above.
 	// Let's check remotes
 	immutable remotesPath = buildPath(refsPath, "remotes");
-
-	string ret = searchDirectoryForHead(remotesPath, headSHA);
+	ret = searchDirectoryForHead(remotesPath, headSHA);
 	if (!ret.empty)
 		return relativePath(ret, remotesPath);
 	else if (pastTime(allottedTime))
 		return headSHA[0 .. 7];
 
-	// We didn't find anything in remotes. Let's check tags.
-	immutable tagsPath = buildPath(refsPath, "tags");
-	ret = searchDirectoryForHead(tagsPath, headSHA);
-	if (!ret.empty)
-		return relativePath(ret, tagsPath);
-	else if (pastTime(allottedTime))
-		return headSHA[0 .. 7];
 
 	// We didn't find anything in remotes. Let's check packed-refs
 	auto packedRefs = File(buildPath(repoRoot, ".git", "packed-refs"))
@@ -213,6 +215,30 @@ string searchDirectoryForHead(string dir, string head)
 	bool matchesHead(ref DirEntry de)
 	{
 		return de.name.readAndStrip() == head;
+	}
+
+	auto matchingRemotes = dirEntries(dir, SpanMode.depth, false)
+		.filter!(f => isRefFile(f) && matchesHead(f));
+
+	if (!matchingRemotes.empty)
+		return matchingRemotes.front.name;
+	else
+		return "";
+}
+
+string searchTagsForHead(string dir, string head)
+{
+	bool matchesHead(ref DirEntry de)
+	{
+		// Tags are a special case. They can either point
+		// to the tagged commit, or to an annotated tag.
+		// We will use git rev-parse to extract the commit
+		// either way.
+		string sha = de.name.readAndStrip();
+		auto execResult = execute(["git", "rev-parse", sha ~ "^{commit}"]);
+		enforce(execResult.status == 0, "git rev-parse failed");
+		string pointsTo = execResult.output.strip();
+		return pointsTo == head;
 	}
 
 	auto matchingRemotes = dirEntries(dir, SpanMode.depth, false)
