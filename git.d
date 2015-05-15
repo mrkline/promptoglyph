@@ -7,7 +7,7 @@ import std.path : baseName, buildPath, relativePath;
 import std.process; // : A whole lotta stuff
 import std.range : empty, front, back;
 import std.stdio : File;
-import std.string : startsWith, strip;
+import std.string : startsWith, strip, countchars, chompPrefix;
 
 import time;
 import vcs;
@@ -144,8 +144,12 @@ string getHead(string repoRoot, Duration allottedTime)
 
 	// If we're on a branch head, .git/HEAD will look like
 	// ref: refs/heads/<branch>
-	if (headSHA.startsWith("ref:"))
-		return headSHA.baseName;
+	if (headSHA.startsWith("ref:")) {
+		if (headSHA.countchars("/") == 2)
+			return headSHA.baseName;
+		else
+			return headSHA.chompPrefix("ref: refs/heads/");
+	}
 
 	// Otherwise let's go rummaging through the refs to find something
 	immutable refsPath = buildPath(repoRoot, ".git", "refs");
