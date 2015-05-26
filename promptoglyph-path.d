@@ -1,4 +1,4 @@
-module promptd.path;
+module promptoglyph.path;
 
 // Explicitly specify what we're importing from each module.
 // I don't usually do this, but the argument for it is that
@@ -49,12 +49,12 @@ void main(string[] args)
 }
 
 string versionString = q"EOS
-promptd-path by Matt Kline, version 0.4
-Part of the promptd tool set
+promptoglyph-path by Matt Kline, version 0.4
+Part of the promptoglyph tool set
 EOS";
 
 string helpString = q"EOS
-usage: promptd-path [-s <length>]
+usage: promptoglyph-path [-s <length>]
 
 Options:
 
@@ -68,7 +68,7 @@ Options:
     Shorten the path if it exceeds <length>.
     Defaults to 0 (always shorten)
 
-promptd-path is designed to be part of a shell prompt.
+promptoglyph-path is designed to be part of a shell prompt.
 It prints your current path, shortened in a similar manner to paths in fish.
 If you only want to shorten paths longer than a given length, use
 --shorten-at-length.

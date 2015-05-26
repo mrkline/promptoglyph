@@ -1,4 +1,4 @@
-module promptd.vcs;
+module promptoglyph.vcs;
 
 import std.getopt;
 import std.datetime : msecs;
@@ -125,12 +125,12 @@ string stringRepOfStatus(const RepoStatus* status, const ref StatusStringOptions
 }
 
 string versionString = q"EOS
-promptd-vcs by Matt Kline, version 0.4
-Part of the promptd tool set
+promptoglyph-vcs by Matt Kline, version 0.4
+Part of the promptoglyph tool set
 EOS";
 
 string helpString = q"EOS
-usage: promptd-vcs [-t <milliseconds>]
+usage: promptoglyph-vcs [-t <milliseconds>]
 
 Options:
 
@@ -181,7 +181,7 @@ Options:
     Used to emit additional escapes needed for color sequences in ZSH prompts.
     Ignored if --no-color is specified.
 
-promptd-vcs is designed to be part of a shell prompt.
+promptoglyph-vcs is designed to be part of a shell prompt.
 It prints a quick, symbolic look at the status of a Git repository
 if you are currently in one and nothing otherwise. Output looks like
     [master ✔±?]

@@ -1,27 +1,27 @@
-# promptd
+# promptoglyph
 
 ## What the?
 
-promptd is a set of tools for shell prompts.
+promptoglyph is a set of tools for shell prompts.
 It currently has two parts:
 
-- `promptd-path`, which prints a [fish](http://fishshell.com/)-like shortening
+- `promptoglyph-path`, which prints a [fish](http://fishshell.com/)-like shortening
   of your current directory.
 
-- `promptd-vcs`, which uses glyphs to give you a quick overview of your
+- `promptoglyph-vcs`, which uses glyphs to give you a quick overview of your
   Git repository status.
   Unlike existing solutions such as the
   [vcs_info](http://zsh.sourceforge.net/Doc/Release/User-Contributions.html#Gathering-information-from-version-control-systems)
-  plugin for Zsh, `promptd-vcs` stops running after a user-specified amount of
+  plugin for Zsh, `promptoglyph-vcs` stops running after a user-specified amount of
   time, so that fetching the status of your repo doesn't make your prompt laggy.
 
 Together, you can use them to build a prompt like this:
 
-![animated promptd example](http://i.imgur.com/2xhoIus.gif)
+![animated promptoglyph example](http://i.imgur.com/2xhoIus.gif)
 
 More to follow.
 
-## Why is it called promptd?
+## Why is it called promptoglyph?
 
 It's a prompt that gives the current <em>d</em>irectory.
 Or it's a prompt written in [D](http://dlang.org).
@@ -31,7 +31,7 @@ Take your pick.
 ## How do I get it?
 
 Linux builds can be found at the
-[releases](https://github.com/mrkline/promptd/releases) page.
+[releases](https://github.com/mrkline/promptoglyph/releases) page.
 They haven't been tested extensively across many distros,
 but Probably Work™ since they only depend on vanilla C libraries
 (pthread, libm, librt, libc).
@@ -44,7 +44,7 @@ Grab a [D compiler](http://dlang.org/download.html) and run `make release`.
 That's all.
 There are no dependencies.
 
-promptd will be added as a [Dub](http://code.dlang.org) package soon-ish.
+promptoglyph will be added as a [Dub](http://code.dlang.org) package soon-ish.
 
 ## How do I use it for my prompt?
 
@@ -56,13 +56,13 @@ In Zsh (for the prompt shown in the demo):
 ```shell
 setopt PROMPT_SUBST
 setopt PROMPT_PERCENT
-PROMPT='%B$(promptd-path) $(promptd-vcs --zsh) %%%b '
+PROMPT='%B$(promptoglyph-path) $(promptoglyph-vcs --zsh) %%%b '
 ```
 
 In Bash,
 
 ```shell
-PS1="\$(promptd-path) \$(promptd-vcs --bash) % "
+PS1="\$(promptoglyph-path) \$(promptoglyph-vcs --bash) % "
 ```
 
 ## It's 2015. Why are you generating a prompt with a compiled program?
