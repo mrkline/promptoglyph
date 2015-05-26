@@ -30,6 +30,6 @@ install: clean release
 	cp $(BUILD_DIR)/promptoglyph-path $(BUILD_DIR)/promptoglyph-vcs $(INSTALL_DIR)
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) promptoglyph.tar.gz
 
 .PHONY: clean debug release all package install
