@@ -12,8 +12,9 @@ It currently has two parts:
   Git repository status.
   Unlike existing solutions such as the
   [vcs_info](http://zsh.sourceforge.net/Doc/Release/User-Contributions.html#Gathering-information-from-version-control-systems)
-  plugin for Zsh, `promptoglyph-vcs` stops running after a user-specified amount of
-  time, so that fetching the status of your repo doesn't make your prompt laggy.
+  plugin for Zsh or [oh-my-git](https://github.com/arialdomartini/oh-my-git),
+  `promptoglyph-vcs` stops running after a user-specified amount of
+  time so that fetching the status of your repo doesn't make your prompt laggy.
 
 Together, you can use them to build a prompt like this:
 
@@ -23,10 +24,11 @@ More to follow.
 
 ## Why is it called promptoglyph?
 
-It's a prompt that gives the current <em>d</em>irectory.
-Or it's a prompt written in [D](http://dlang.org).
-Or I suck at naming things.
-Take your pick.
+It was originally called `promptd` because it is a *prompt* that gives the
+current <em>d</em>irectory and is written in [D](http://dlang.org).
+But someone made the valid point that the name implies a daemon,
+so I went with promptoglyph.
+Cheesy, but according to a cursory Google search, unique.
 
 ## How do I get it?
 
