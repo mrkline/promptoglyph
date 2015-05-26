@@ -49,7 +49,7 @@ void main(string[] args)
 }
 
 string versionString = q"EOS
-promptoglyph-path by Matt Kline, version 0.4
+promptoglyph-path by Matt Kline, version 0.5
 Part of the promptoglyph tool set
 EOS";
 
