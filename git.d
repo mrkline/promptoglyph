@@ -177,7 +177,8 @@ string getHead(string repoRoot, Duration allottedTime)
 	// We didn't find anything in remotes. Let's check packed-refs
 	auto packedRefs = File(buildPath(repoRoot, ".git", "packed-refs"))
 		.byLine
-		.filter!(l => !l.startsWith('#'));
+		.filter!(l => !l.startsWith('#'))
+		.filter!(l => !l.startsWith('^'));
 
 	foreach(line; packedRefs) {
 		// Each line is in the form
