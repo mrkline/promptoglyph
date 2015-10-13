@@ -2,7 +2,7 @@ import std.algorithm : canFind, filter, splitter;
 import std.conv : to;
 import std.datetime : Duration;
 import std.exception : enforce;
-import std.file : dirEntries, DirEntry, readText, SpanMode;
+import std.file : exists, dirEntries, DirEntry, readText, SpanMode;
 import std.path : baseName, buildPath, relativePath;
 import std.process; // : A whole lotta stuff
 import std.range : empty, front, back;
@@ -175,26 +175,29 @@ string getHead(string repoRoot, Duration allottedTime)
 
 
 	// We didn't find anything in remotes. Let's check packed-refs
-	auto packedRefs = File(buildPath(repoRoot, ".git", "packed-refs"))
-		.byLine
-		.filter!(l => !l.startsWith('#'))
-		.filter!(l => !l.startsWith('^'));
+	immutable packedRefsPath = buildPath(repoRoot, ".git", "packed-refs");
+	if (exists(packedRefsPath)) {
+		auto packedRefs = File(packedRefsPath)
+			.byLine
+			.filter!(l => !l.startsWith('#'))
+			.filter!(l => !l.startsWith('^'));
 
-	foreach(line; packedRefs) {
-		// Each line is in the form
-		// <sha> <path>
-		auto tokens = splitter(line);
-		auto sha = tokens.front;
-		tokens.popFront();
-		auto refPath = tokens.front;
-		tokens.popFront();
-		// Line should be empty now
-		enforce(tokens.empty, "Weird Git packed-refs remnant:\n" ~ tokens.to!string);
+		foreach(line; packedRefs) {
+			// Each line is in the form
+			// <sha> <path>
+			auto tokens = splitter(line);
+			auto sha = tokens.front;
+			tokens.popFront();
+			auto refPath = tokens.front;
+			tokens.popFront();
+			// Line should be empty now
+			enforce(tokens.empty, "Weird Git packed-refs remnant:\n" ~ tokens.to!string);
 
-		if (sha == headSHA)
-			return refPath.baseName.idup;
-		else if (pastTime(allottedTime))
-			return headSHA[0 .. 7];
+			if (sha == headSHA)
+				return refPath.baseName.idup;
+			else if (pastTime(allottedTime))
+				return headSHA[0 .. 7];
+		}
 	}
 
 	// Still nothing. Just return a shortened version of the HEAD sha
