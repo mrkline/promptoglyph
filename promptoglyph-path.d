@@ -23,6 +23,7 @@ void main(string[] args)
 	import std.stdio : write;
 
 	int shortenAt = 0;
+	int shortenNumChars = 1;
 
 	try {
 		getopt(args,
@@ -30,7 +31,8 @@ void main(string[] args)
 			config.bundling,
 			"help|h", { writeAndSucceed(helpString); },
 			"version|v", { writeAndSucceed(versionString); },
-			"shorten-at-length|s", &shortenAt);
+			"shorten-at-length|s", &shortenAt,
+			"shorten-to-num-chars|n", &shortenNumChars);
 	}
 	catch (GetOptException ex) {
 		writeAndFail(ex.msg, "\n", helpString);
@@ -43,7 +45,7 @@ void main(string[] args)
 	string path = homeToTilde(cwd, home);
 
 	if (path.count >= shortenAt)
-		path = shorten(path);
+		path = shorten(path, shortenNumChars);
 
 	write(path);
 }
@@ -68,6 +70,10 @@ Options:
     Shorten the path if it exceeds <length>.
     Defaults to 0 (always shorten)
 
+  --shorten-to-num-chars, -n <length>
+    When shortening, keep <length> characters in shortened path.
+    Defaults to 1 (keep first character)
+
 promptoglyph-path is designed to be part of a shell prompt.
 It prints your current path, shortened in a similar manner to paths in fish.
 If you only want to shorten paths longer than a given length, use
@@ -84,7 +90,7 @@ pure string homeToTilde(string cwd, string home)
 		return cwd;
 }
 
-pure string shorten(string path)
+pure string shorten(string path, int numChars = 1)
 {
 	auto pathTokens = pathSplitter(path).array;
 
@@ -97,9 +103,9 @@ pure string shorten(string path)
 
 	// If we have a home directory at the start, don't shorten that.
 	if (rest[0].startsWith("~"))
-		rest = rest[0] ~ rest[1 .. $].map!(s => firstOf(s)).array;
+		rest = rest[0] ~ rest[1 .. $].map!(s => firstOf(s, numChars)).array;
 	else
-		rest = rest.map!(s => firstOf(s)).array;
+		rest = rest.map!(s => firstOf(s, numChars)).array;
 
 	return buildPath(rest ~ last);
 }
@@ -109,11 +115,17 @@ unittest
 	assert(shorten("foo") == "foo");
 	assert(shorten("/foo/bar/baz") == "/f/b/baz");
 	assert(shorten("~foo/bar/baz") == "~foo/b/baz");
+	assert(shorten("foo", 2) == "foo");
+	assert(shorten("/foo/bar/baz", 2) == "/fo/ba/baz");
+	assert(shorten("~foo/bar/baz", 2) == "~foo/ba/baz");
+	assert(shorten("foo", 99) == "foo");
+	assert(shorten("/foo/bar/baz", 99) == "/foo/bar/baz");
+	assert(shorten("~foo/bar/baz", 99) == "~foo/bar/baz");
 }
 
 // Takes a string and returns its first character,
 // as a string
-pure auto firstOf(S)(S s) if (isSomeString!S)
+pure auto firstOf(S)(S s, int numChars = 1) if (isSomeString!S)
 in
 {
 	assert(!s.empty);
@@ -124,11 +136,18 @@ body
 
 	// We use take so that this plays nicely
 	// with non-ASCII file names.
-	return s.take(1).to!S;
+	if (numChars > s.length)
+		return s.to!S;
+	else
+		return s.take(numChars).to!S;
 }
 
 unittest
 {
 	assert(firstOf("ASCII") == "A");
 	assert(firstOf("漢字") == "漢");
+	assert(firstOf("ASCII", 2) == "AS");
+	assert(firstOf("漢字漢字", 2) == "漢字");
+	assert(firstOf("ASCII", 99) == "ASCII");
+	assert(firstOf("漢字漢字", 99) == "漢字漢字");
 }
