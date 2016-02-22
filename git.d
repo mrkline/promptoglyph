@@ -2,12 +2,13 @@ import std.algorithm : canFind, filter, splitter;
 import std.conv : to;
 import std.datetime : Duration;
 import std.exception : enforce;
-import std.file : exists, dirEntries, DirEntry, readText, SpanMode;
+import std.file : exists, isFile, dirEntries, DirEntry, readText, SpanMode;
 import std.path : baseName, buildPath, relativePath;
 import std.process; // : A whole lotta stuff
 import std.range : empty, front, back;
 import std.stdio : File;
 import std.string : startsWith, strip, countchars, chompPrefix;
+import std.array : split;
 
 import time;
 import vcs;
@@ -138,6 +139,22 @@ string getHead(string repoRoot, Duration allottedTime)
 	// getHead doesn't use async I/O because it is assumed that
 	// reading one-line files will take a negligible amount of time.
 	// If this assumption proves false, we should revisit it.
+
+	// NOTE(dkg): added check to allow for git submodules
+	// check if the .git file/folder is actually a folder
+	// if it is a file, we are in a submodule
+	immutable gitFileOrFolder = buildPath(repoRoot, ".git");
+	if (exists(gitFileOrFolder) && isFile(gitFileOrFolder)) {
+		string content = gitFileOrFolder.readAndStrip();
+		//Example content: gitdir: ../.git/modules/modulename
+		string[] contentSplit = split(content, "/");
+		if (contentSplit.length > 0) {
+			return "sub: " ~ (contentSplit[$-1]);
+		}
+		else {
+			return "<an unknown submodule>";
+		}
+	}
 
 	immutable headPath = buildPath(repoRoot, ".git", "HEAD");
 	immutable headSHA = headPath.readAndStrip();
