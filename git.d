@@ -2,7 +2,7 @@ import std.algorithm : canFind, filter, splitter;
 import std.conv : to;
 import std.datetime : Duration;
 import std.exception : enforce;
-import std.file : exists, isFile, dirEntries, DirEntry, readText, SpanMode;
+import std.file;
 import std.path : baseName, buildPath, relativePath;
 import std.process; // : A whole lotta stuff
 import std.range : empty, front, back;
@@ -237,6 +237,9 @@ bool isRefFile(ref DirEntry de)
 
 string searchDirectoryForHead(string dir, string head)
 {
+    if (!dir.exists() || !dir.isDir())
+        return "";
+
 	bool matchesHead(ref DirEntry de)
 	{
 		return de.name.readAndStrip() == head;
