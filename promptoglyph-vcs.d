@@ -128,7 +128,7 @@ string stringRepOfStatus(const RepoStatus* status, const ref StatusStringOptions
 }
 
 string versionString = q"EOS
-promptoglyph-vcs by Matt Kline, version 0.5
+promptoglyph-vcs by Matt Kline, version 0.5.1
 Part of the promptoglyph tool set
 EOS";
 
