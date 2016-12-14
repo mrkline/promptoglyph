@@ -1,12 +1,12 @@
-DC = dmd
-DFLAGS = -wi -g
+DC ?= ldc
+DFLAGS ?= -wi -g
 BUILD_DIR = build
 INSTALL_DIR = /usr/local/bin
 
 debug: DFLAGS += -debug
 debug: all
 
-release: DFLAGS += -O -release
+release: DFLAGS += -O -release -mcpu=native
 release: all
 
 all: $(BUILD_DIR)/promptoglyph-path $(BUILD_DIR)/promptoglyph-vcs
