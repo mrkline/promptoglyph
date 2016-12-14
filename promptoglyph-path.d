@@ -6,7 +6,6 @@ module promptoglyph.path;
 // It's similar to Python's "from x import y"
 import std.algorithm : map, startsWith;
 import std.array : array;
-import std.datetime : msecs;
 import std.file : getcwd;
 import std.getopt;
 import std.path : pathSplitter, buildPath;

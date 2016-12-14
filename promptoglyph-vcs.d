@@ -7,6 +7,7 @@ import std.stdio : write;
 import color;
 import git;
 import help;
+import time;
 import vcs;
 
 struct StatusStringOptions {
@@ -19,6 +20,8 @@ struct StatusStringOptions {
 
 void main(string[] args)
 {
+	markProgramStart();
+
 	uint timeLimit = 500;
 	bool noColor;
 	bool bash, zsh;
