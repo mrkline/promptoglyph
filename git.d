@@ -262,9 +262,15 @@ string searchTagsForHead(string dir, string head)
 		// to the tagged commit, or to an annotated tag.
 		// We will use git rev-parse to extract the commit
 		// either way.
-		string sha = de.name.readAndStrip();
-		auto execResult = execute(["git", "rev-parse", sha ~ "^{commit}"]);
-		enforce(execResult.status == 0, "git rev-parse failed");
+        string revParseArg = de.name.readAndStrip() ~ "^{commit}";
+		auto execResult = execute(["git", "rev-parse", revParseArg]);
+
+		// In some really rare and weird cases,
+		// there's some standalone tree objects that make the command fall over.
+		// For an example, see 5dc01c595e6c6ec9ccda4f6f69c131c0dd945f8c in
+		// the Linux kernel.
+		if (execResult.status != 0) return false;
+
 		string pointsTo = execResult.output.strip();
 		return pointsTo == head;
 	}
