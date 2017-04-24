@@ -264,7 +264,7 @@ string searchTagsForHead(string dir, string head)
 		// to the tagged commit, or to an annotated tag.
 		// We will use git rev-parse to extract the commit
 		// either way.
-        string revParseArg = de.name.readAndStrip() ~ "^{commit}";
+		string revParseArg = de.name.readAndStrip() ~ "^{commit}";
 		auto execResult = execute(["git", "rev-parse", revParseArg]);
 
 		// In some really rare and weird cases,
