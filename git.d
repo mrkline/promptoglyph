@@ -10,6 +10,8 @@ import std.stdio : File;
 import std.string : startsWith, strip, countchars, chompPrefix;
 import std.array : split;
 
+import core.stdc.stdio : fileno;
+
 import time;
 import vcs;
 
@@ -93,7 +95,7 @@ StatusFlags asyncGetFlags(Duration allottedTime)
 	}
 
 	// We need the actual file descriptor of the pipe so we can call poll
-	immutable int fdes = core.stdc.stdio.fileno(pipes.stdout.getFP());
+	immutable int fdes = fileno(pipes.stdout.getFP());
 	enforce(fdes >= 0, "fileno failed.");
 
 	pollfd pfd;

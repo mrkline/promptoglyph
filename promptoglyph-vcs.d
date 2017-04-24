@@ -1,7 +1,8 @@
 module promptoglyph.vcs;
 
 import std.getopt;
-import std.datetime : msecs;
+import std.datetime : msecs, Duration;
+import std.range : empty;
 import std.stdio : write;
 
 import color;
