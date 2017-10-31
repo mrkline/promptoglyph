@@ -1,4 +1,4 @@
-import std.algorithm : canFind, filter, splitter;
+import std.algorithm : canFind, count, filter, splitter;
 import std.conv : to;
 import std.datetime : Duration;
 import std.exception : enforce;
@@ -7,7 +7,7 @@ import std.path : baseName, buildPath, relativePath;
 import std.process; // : A whole lotta stuff
 import std.range : empty, front, back;
 import std.stdio : File;
-import std.string : startsWith, strip, countchars, chompPrefix;
+import std.string : startsWith, strip, chompPrefix;
 import std.array : split;
 
 import core.stdc.stdio : fileno;
@@ -164,7 +164,7 @@ string getHead(string repoRoot, Duration allottedTime)
 	// If we're on a branch head, .git/HEAD will look like
 	// ref: refs/heads/<branch>
 	if (headSHA.startsWith("ref:")) {
-		if (headSHA.countchars("/") == 2)
+		if (headSHA.count("/") == 2)
 			return headSHA.baseName;
 		else
 			return headSHA.chompPrefix("ref: refs/heads/");
