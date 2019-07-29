@@ -1,7 +1,6 @@
 module promptoglyph.vcs;
 
 import std.getopt;
-import std.datetime : msecs, Duration;
 import std.range : empty;
 import std.stdio : write;
 
@@ -23,7 +22,6 @@ void main(string[] args)
 {
 	markProgramStart();
 
-	uint timeLimit = 500;
 	bool noColor;
 	bool bash, zsh;
 	StatusStringOptions stringOptions;
@@ -34,7 +32,6 @@ void main(string[] args)
 			config.bundling,
 			"help|h", { writeAndSucceed(helpString); },
 			"version|v", { writeAndSucceed(versionString); },
-			"time-limit|t", &timeLimit,
 			"prefix|p", &stringOptions.prefix,
 			"indexed-text|i", &stringOptions.indexedText,
 			"modified-text|m", &stringOptions.modifiedText,
@@ -59,15 +56,12 @@ void main(string[] args)
 	else // Redundant (none is the default), but more explicit.
 		escapesToUse = Escapes.none;
 
-	const Duration allottedTime = timeLimit.msecs;
-
-	const RepoStatus* status = getRepoStatus(allottedTime);
+	const RepoStatus* status = getRepoStatus();
 
 	string statusString = stringRepOfStatus(
 		status, stringOptions,
 		noColor ? UseColor.no : UseColor.yes,
-		escapesToUse,
-		allottedTime);
+		escapesToUse);
 
 	write(statusString);
 }
@@ -76,15 +70,12 @@ void main(string[] args)
  * Gets a string representation of the status of the Git repo
  *
  * Params:
- *   allottedTime = The amount of time given to gather Git info.
- *                  Git status will be killed if it does not complete in this much time.
- *                  Since this is for a shell prompt, responsiveness is important.
  *   colors = Whether or not colored output is desired
  *   escapes = Whether or not ZSH escapes are needed. Ignored if no colors are desired.
  *
  */
 string stringRepOfStatus(const RepoStatus* status, const ref StatusStringOptions stringOptions,
-                         UseColor colors, Escapes escapes, Duration allottedTime)
+                         UseColor colors, Escapes escapes)
 {
 	import time;
 
@@ -121,9 +112,6 @@ string stringRepOfStatus(const RepoStatus* status, const ref StatusStringOptions
 
 	string ret = head ~ flags ~
 	             colorText(stringOptions.suffix, &resetColor);
-
-	if (pastTime(allottedTime))
-		ret = "T " ~ ret;
 
 	return stringOptions.prefix ~ ret;
 }
@@ -191,8 +179,7 @@ if you are currently in one and nothing otherwise. Output looks like
     [master ✔±?]
 where "master" is the current branch, ? indicates untracked files,
 ± indicates changed but unstaged files, and ✔ indicates files staged
-in the index. If "git status" could not run in a timely manner to get this info
-(see --time-limit above), a T is placed in front.
+in the index.
 Future plans include additional info (like when merging),
 and possibly Subversion and Mercurial support.
 EOS";

@@ -17,7 +17,7 @@ import vcs;
 
 // Fetches information about the Git repository,
 // or returns null if we are not in one.
-RepoStatus* getRepoStatus(Duration allottedTime)
+RepoStatus* getRepoStatus()
 {
 	import std.parallelism;
 
@@ -31,9 +31,9 @@ RepoStatus* getRepoStatus(Duration allottedTime)
 
 	RepoStatus* ret = new RepoStatus;
 
-	ret.head = getHead(repoRoot, allottedTime);
+	ret.head = getHead(repoRoot);
 
-	ret.flags = asyncGetFlags(allottedTime);
+	ret.flags = getFlags();
 
 	return ret;
 }
@@ -41,39 +41,20 @@ RepoStatus* getRepoStatus(Duration allottedTime)
 
 private:
 
-/// Uses asynchronous I/O to read as much git status output as it can
-/// in the given amount of time.
-public // So std.parallelism can get at it
-StatusFlags asyncGetFlags(Duration allottedTime)
+StatusFlags getFlags()
 {
-	// Currently we can only do this for Unix.
-	// Windows async pipe I/O (they call it "overlapped" I/O)
-	// is more... involved.
-	// TODO: Either write a Windows implementation or suck it up
-	//       and do things synchronously in Windows.
-	import core.sys.posix.poll;
-
 	StatusFlags ret;
-
-	// Light off git status while we find the HEAD
-	auto pipes = pipeProcess(["git", "status", "--porcelain"], Redirect.stdout);
-	// If an exception gets thrown, be sure to cleanup the process.
-	scope(failure) {
-		kill(pipes.pid);
-		wait(pipes.pid);
-	}
 
 	// Local function for processing the output of git status.
 	// See the docs for git status porcelain output
-	void processPorcelainLine(string line)
+	void processPorcelainLine(const char[] line)
 	{
 		if (line is null)
 			return;
 
 		// git status --porcelain spits out a two-character code
 		// for each file that would show up in Git status
-		// Why is this .array needed? Check odd set.back error below
-		string set = line[0 .. 2];
+		const char[] set = line[0 .. 2];
 
 		// Question marks indicate a file is untracked.
 		if (set.canFind('?')) {
@@ -94,54 +75,24 @@ StatusFlags asyncGetFlags(Duration allottedTime)
 		}
 	}
 
-	// We need the actual file descriptor of the pipe so we can call poll
-	immutable int fdes = fileno(pipes.stdout.getFP());
-	enforce(fdes >= 0, "fileno failed.");
-
-	pollfd pfd;
-	pfd.fd = fdes; // The file descriptor we want to poll
-	pfd.events = POLLIN; // Notify us if there is data to be read
-
-	string nextLine;
-
-	// As long as git status is running, keep at it.
-	while (!tryWait(pipes.pid).terminated) {
-
-		// Poll the pipe with an arbitrary 5 millisecond timeout
-		enforce(poll(&pfd, 1, 5) >= 0, "poll failed");
-
-		// If we have data to read, process a line of it.
-		if (pfd.revents & POLLIN) {
-			nextLine = pipes.stdout.readln();
-			processPorcelainLine(nextLine);
-		}
-		else if (pastTime(allottedTime)) {
-			import core.sys.posix.signal: SIGTERM;
-			kill(pipes.pid, SIGTERM);
-			break;
-		}
+	// Light off git status while we find the HEAD
+	auto pipes = pipeProcess(["git", "status", "--porcelain"], Redirect.stdout);
+	scope (failure) {
+		kill(pipes.pid);
+	}
+	scope (exit) {
+		wait(pipes.pid);
 	}
 
-	// Process anything left over
-	while (nextLine !is null) {
-		nextLine = pipes.stdout.readln();
-		processPorcelainLine(nextLine);
-	}
-
-	// Join the process
-	wait(pipes.pid);
+	foreach (line; pipes.stdout.byLine) processPorcelainLine(line);
 
 	return ret;
 }
 
 /// Gets the name of the current Git head, or a shortened SHA
 /// if there is no symbolic name.
-string getHead(string repoRoot, Duration allottedTime)
+string getHead(string repoRoot)
 {
-	// getHead doesn't use async I/O because it is assumed that
-	// reading one-line files will take a negligible amount of time.
-	// If this assumption proves false, we should revisit it.
-
 	// NOTE(dkg): added check to allow for git submodules
 	// check if the .git file/folder is actually a folder
 	// if it is a file, we are in a submodule
@@ -180,8 +131,6 @@ string getHead(string repoRoot, Duration allottedTime)
 	ret = searchTagsForHead(tagsPath, headSHA);
 	if (!ret.empty)
 		return relativePath(ret, tagsPath);
-	else if (pastTime(allottedTime))
-		return headSHA[0 .. 7];
 
 	// No need to check heads as we handled that case above.
 	// Let's check remotes
@@ -189,9 +138,6 @@ string getHead(string repoRoot, Duration allottedTime)
 	ret = searchDirectoryForHead(remotesPath, headSHA);
 	if (!ret.empty)
 		return relativePath(ret, remotesPath);
-	else if (pastTime(allottedTime))
-		return headSHA[0 .. 7];
-
 
 	// We didn't find anything in remotes. Let's check packed-refs
 	immutable packedRefsPath = buildPath(repoRoot, ".git", "packed-refs");
@@ -214,12 +160,10 @@ string getHead(string repoRoot, Duration allottedTime)
 
 			if (sha == headSHA)
 				return refPath.baseName.idup;
-			else if (pastTime(allottedTime))
-				return headSHA[0 .. 7];
 		}
 	}
 
-	// Still nothing. Just return a shortened version of the HEAD sha
+	// Still nothing. Just return a shortened version of the HEAD SHA
 	return headSHA[0 .. 7];
 }
 
